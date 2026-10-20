@@ -48,9 +48,9 @@ export default function LeaveApprovals() {
       const matchesDept = departmentFilter === "all" || item.department === departmentFilter;
       const matchesType = typeFilter === "all" || item.leaveType === typeFilter;
       const matchesSearch =
-        item.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.reason?.toLowerCase().includes(searchTerm.toLowerCase());
+        (item.employeeName ? item.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+        (item.id ? String(item.id).toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+        (item.reason ? item.reason.toLowerCase().includes(searchTerm.toLowerCase()) : false);
 
       return matchesTab && matchesDept && matchesType && matchesSearch;
     });

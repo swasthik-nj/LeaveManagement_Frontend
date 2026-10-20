@@ -43,7 +43,7 @@ export default function MyLeaveRequests() {
 
   // User's own requests
   const myRequests = useMemo(() => {
-    return leaveRequests.filter((r) => r.employeeId === user?.employeeId);
+    return leaveRequests.filter((r) => r.employeeId === user?.employeeId || (user?._id && String(r.user) === String(user._id)));
   }, [leaveRequests, user]);
 
   // Status counts
@@ -60,9 +60,9 @@ export default function MyLeaveRequests() {
   const filteredRequests = useMemo(() => {
     return myRequests.filter((item) => {
       const matchesSearch =
-        item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.reason?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.leaveTypeLabel?.toLowerCase().includes(searchTerm.toLowerCase());
+        (item.id ? String(item.id).toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+        (item.reason ? item.reason.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+        (item.leaveTypeLabel ? item.leaveTypeLabel.toLowerCase().includes(searchTerm.toLowerCase()) : false);
 
       const matchesStatus = statusFilter === "all" || item.status === statusFilter;
       const matchesType = typeFilter === "all" || item.leaveType === typeFilter;

@@ -23,14 +23,14 @@ import {
 export default function LeaveHistory() {
   const { user, leaveRequests } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
-  const [yearFilter, setYearFilter] = useState("2024");
+  const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   // User's own leaves
   const myRequests = useMemo(() => {
-    return leaveRequests.filter((r) => r.employeeId === user?.employeeId);
+    return leaveRequests.filter((r) => r.employeeId === user?.employeeId || (user?._id && String(r.user) === String(user._id)));
   }, [leaveRequests, user]);
 
   // Filtered leaves
@@ -41,9 +41,9 @@ export default function LeaveHistory() {
       const matchesType = typeFilter === "all" || item.leaveType === typeFilter;
       const matchesStatus = statusFilter === "all" || item.status === statusFilter;
       const matchesSearch =
-        item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.reason?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.leaveTypeLabel?.toLowerCase().includes(searchTerm.toLowerCase());
+        (item.id ? String(item.id).toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+        (item.reason ? item.reason.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+        (item.leaveTypeLabel ? item.leaveTypeLabel.toLowerCase().includes(searchTerm.toLowerCase()) : false);
 
       return matchesYear && matchesType && matchesStatus && matchesSearch;
     });
@@ -175,6 +175,8 @@ export default function LeaveHistory() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Years</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
                   <SelectItem value="2024">2024</SelectItem>
                   <SelectItem value="2023">2023</SelectItem>
                 </SelectContent>

@@ -48,10 +48,35 @@ export default function Register() {
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    toast.success("Registration successful! Please sign in.");
-    navigate("/login");
-    setIsSubmitting(false);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          employeeId: formData.employeeId.trim(),
+          password: formData.password,
+          department: formData.department,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Account registered successfully in the database! Please sign in.");
+        navigate("/login");
+      } else {
+        const errorMsg = data.message || (data.errors && data.errors[0]) || "Registration failed.";
+        toast.error(errorMsg);
+        setErrors((prev) => ({ ...prev, email: errorMsg }));
+      }
+    } catch (err) {
+      toast.error("Network error: Could not reach the backend server.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const FieldError = ({ field }) => errors[field] ? <p className="text-xs text-destructive mt-1">{errors[field]}</p> : null;
@@ -95,27 +120,15 @@ export default function Register() {
               <FieldError field="email" />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={formData.department} onValueChange={(v) => { setFormData((p) => ({ ...p, department: v })); if (errors.department) setErrors((p) => ({ ...p, department: "" })); }}>
-                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                  <SelectContent>
-                    {DEPARTMENTS.map((d) => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <FieldError field="department" />
-              </div>
-              <div className="space-y-2">
-                <Label>Role <span className="text-xs text-muted-foreground">(demo only)</span></Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData((p) => ({ ...p, role: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Select value={formData.department} onValueChange={(v) => { setFormData((p) => ({ ...p, department: v })); if (errors.department) setErrors((p) => ({ ...p, department: "" })); }}>
+                <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((d) => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <FieldError field="department" />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

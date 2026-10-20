@@ -34,13 +34,13 @@ export default function Login() {
     // Simulate network delay
     await new Promise((r) => setTimeout(r, 800));
 
-    const result = login(formData.email.trim(), formData.password);
+    const result = await login(formData.email.trim(), formData.password);
     if (result.success) {
       toast.success(`Welcome back, ${result.user.name.split(" ")[0]}!`);
       navigate("/dashboard");
     } else {
-      setError(result.message);
-      toast.error(result.message);
+      setError(result.message || "Invalid credentials");
+      toast.error(result.message || "Invalid credentials");
     }
     setIsSubmitting(false);
   };

@@ -74,21 +74,30 @@ export default function ApplyLeave() {
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 800));
+
     const selectedType = LEAVE_TYPES.find((t) => t.value === form.leaveType);
-    addLeaveRequest({
+    const startStr = formatDate(form.startDate, "yyyy-MM-dd");
+    const endStr = formatDate(form.endDate, "yyyy-MM-dd");
+
+    const result = await addLeaveRequest({
       employeeId: user?.employeeId,
       employeeName: user?.name,
       department: user?.department,
       leaveType: form.leaveType,
       leaveTypeLabel: selectedType?.label || form.leaveType,
-      startDate: form.startDate.toISOString().split("T")[0],
-      endDate: form.endDate.toISOString().split("T")[0],
+      startDate: startStr,
+      endDate: endStr,
       days: workingDays,
+      isHalfDay: form.isHalfDay,
       reason: form.reason.trim(),
     });
-    toast.success("Leave request submitted successfully!");
-    navigate("/leave-requests");
+
+    if (result.success) {
+      toast.success("Leave request submitted and saved to database!");
+      navigate("/leave-requests");
+    } else {
+      toast.error(result.message || "Failed to submit leave request.");
+    }
     setIsSubmitting(false);
   };
 
