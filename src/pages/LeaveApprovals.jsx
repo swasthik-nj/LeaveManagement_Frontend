@@ -60,9 +60,9 @@ export default function LeaveApprovals() {
     approveLeaveRequest(reqId, user?.name || "Admin");
   };
 
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (rejectingItem) {
-      rejectLeaveRequest(
+      await rejectLeaveRequest(
         rejectingItem.id,
         user?.name || "Admin",
         rejectReason.trim() || "Operational requirements prevent approval at this time."

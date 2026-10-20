@@ -61,6 +61,51 @@
   to { height: 0; }
 }
 
+/* Custom styling for booked/disabled leave dates in Calendar */
+.rdp-day.leave-booked-approved > button,
+.leave-booked-approved > button,
+button.leave-booked-approved,
+.leave-booked-approved {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border: 1px solid #6ee7b7 !important;
+  font-weight: 600 !important;
+  cursor: not-allowed !important;
+  opacity: 0.95 !important;
+  border-radius: 6px !important;
+}
+
+.rdp-day.leave-booked-pending > button,
+.leave-booked-pending > button,
+button.leave-booked-pending,
+.leave-booked-pending {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fcd34d !important;
+  font-weight: 600 !important;
+  cursor: not-allowed !important;
+  opacity: 0.95 !important;
+  border-radius: 6px !important;
+}
+
+.dark .rdp-day.leave-booked-approved > button,
+.dark .leave-booked-approved > button,
+.dark button.leave-booked-approved,
+.dark .leave-booked-approved {
+  background-color: rgba(6, 95, 70, 0.4) !important;
+  color: #a7f3d0 !important;
+  border: 1px solid #059669 !important;
+}
+
+.dark .rdp-day.leave-booked-pending > button,
+.dark .leave-booked-pending > button,
+.dark button.leave-booked-pending,
+.dark .leave-booked-pending {
+  background-color: rgba(146, 64, 14, 0.4) !important;
+  color: #fde68a !important;
+  border: 1px solid #d97706 !important;
+}
+
 @utility animate-accordion-down {
   animation: accordion-down 0.2s ease-out;
 }

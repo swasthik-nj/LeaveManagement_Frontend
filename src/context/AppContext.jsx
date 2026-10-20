@@ -247,6 +247,7 @@ export function AppProvider({ children }) {
 
   // Reject leave request (Admin)
   const rejectLeaveRequest = useCallback(async (requestId, approverName, reason) => {
+    const finalReason = (reason && reason.trim()) || "Operational requirements prevent approval at this time.";
     const token = localStorage.getItem("leaveflow_token");
     const headers = {
       "Content-Type": "application/json",
@@ -257,7 +258,7 @@ export function AppProvider({ children }) {
         method: "PATCH",
         headers,
         credentials: "include",
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason: finalReason }),
       });
       const data = await res.json();
       if (data.success && data.data?.request) {

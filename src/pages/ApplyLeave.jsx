@@ -37,9 +37,47 @@ export default function ApplyLeave() {
   });
 
   const myRequests = useMemo(
-    () => leaveRequests.filter((r) => r.employeeId === user?.employeeId),
+    () => leaveRequests.filter((r) => r.employeeId === user?.employeeId || (user?._id && String(r.user) === String(user._id))),
     [leaveRequests, user]
   );
+
+  const getDateKey = (date) => {
+    if (!date) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  // Map of booked dates for current user: "YYYY-MM-DD" -> { status: "pending" | "approved", leaveType }
+  const bookedDatesMap = useMemo(() => {
+    const map = new Map();
+    myRequests.forEach((req) => {
+      if (req.status !== "pending" && req.status !== "approved") return;
+      if (!req.startDate || !req.endDate) return;
+
+      const [sYear, sMonth, sDay] = req.startDate.split("-").map(Number);
+      const [eYear, eMonth, eDay] = req.endDate.split("-").map(Number);
+
+      const start = new Date(sYear, sMonth - 1, sDay);
+      const end = new Date(eYear, eMonth - 1, eDay);
+
+      const curr = new Date(start);
+      while (curr <= end) {
+        map.set(getDateKey(curr), {
+          status: req.status,
+          leaveType: req.leaveTypeLabel || req.leaveType,
+          requestId: req.id,
+        });
+        curr.setDate(curr.getDate() + 1);
+      }
+    });
+    return map;
+  }, [myRequests]);
+
+  const isDateBooked = (date) => bookedDatesMap.has(getDateKey(date));
+  const isDateApproved = (date) => bookedDatesMap.get(getDateKey(date))?.status === "approved";
+  const isDatePending = (date) => bookedDatesMap.get(getDateKey(date))?.status === "pending";
 
   const selectedPolicy = leavePolicies.find((p) => p.type === form.leaveType);
   const balance = selectedPolicy
@@ -62,9 +100,27 @@ export default function ApplyLeave() {
     if (!form.leaveType) e.leaveType = "Select a leave type";
     if (!form.startDate) e.startDate = "Select a start date";
     if (!form.endDate) e.endDate = "Select an end date";
-    if (form.startDate && form.endDate && form.endDate < form.startDate) e.endDate = "End date must be after start date";
+    if (form.startDate && form.endDate) {
+      if (form.endDate < form.startDate) {
+        e.endDate = "End date must be after start date";
+      } else {
+        const curr = new Date(form.startDate);
+        const end = new Date(form.endDate);
+        let hasOverlap = false;
+        while (curr <= end) {
+          if (isDateBooked(curr)) {
+            hasOverlap = true;
+            break;
+          }
+          curr.setDate(curr.getDate() + 1);
+        }
+        if (hasOverlap) {
+          e.endDate = "Selected date range overlaps with an existing leave request";
+        }
+      }
+    }
     if (!form.reason.trim()) e.reason = "Please provide a reason";
-    if (workingDays <= 0 && form.startDate && form.endDate) e.endDate = "Selected range has no working days";
+    if (workingDays <= 0 && form.startDate && form.endDate && !e.endDate) e.endDate = "Selected range has no working days";
     if (remainingAfter !== null && remainingAfter < 0) e.leaveType = "Insufficient leave balance";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -152,6 +208,16 @@ export default function ApplyLeave() {
               <FieldError field="leaveType" />
             </div>
 
+            {/* Notice if user already has booked dates */}
+            {bookedDatesMap.size > 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>
+                  <strong>Applied Dates Disabled:</strong> Dates you have already submitted for leave are colored (amber for pending, green for approved) and disabled from re-selection.
+                </span>
+              </div>
+            )}
+
             {/* Date pickers */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -172,8 +238,26 @@ export default function ApplyLeave() {
                         setStartOpen(false);
                         if (errors.startDate) setErrors((p) => ({ ...p, startDate: "" }));
                       }}
-                      disabled={(date) => date < today}
+                      disabled={(date) => date < today || isDateBooked(date)}
+                      modifiers={{
+                        "leave-booked-approved": (date) => isDateApproved(date),
+                        "leave-booked-pending": (date) => isDatePending(date),
+                      }}
+                      modifiersClassNames={{
+                        "leave-booked-approved": "leave-booked-approved",
+                        "leave-booked-pending": "leave-booked-pending",
+                      }}
                     />
+                    <div className="border-t p-2.5 bg-muted/30 flex items-center justify-between text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-amber-200 border border-amber-400 inline-block" />
+                        <span>Pending Leave</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-emerald-200 border border-emerald-400 inline-block" />
+                        <span>Approved Leave</span>
+                      </div>
+                    </div>
                   </PopoverContent>
                 </Popover>
                 <FieldError field="startDate" />
@@ -196,8 +280,26 @@ export default function ApplyLeave() {
                         setEndOpen(false);
                         if (errors.endDate) setErrors((p) => ({ ...p, endDate: "" }));
                       }}
-                      disabled={(date) => date < today || (form.startDate && date < form.startDate)}
+                      disabled={(date) => date < today || (form.startDate && date < form.startDate) || isDateBooked(date)}
+                      modifiers={{
+                        "leave-booked-approved": (date) => isDateApproved(date),
+                        "leave-booked-pending": (date) => isDatePending(date),
+                      }}
+                      modifiersClassNames={{
+                        "leave-booked-approved": "leave-booked-approved",
+                        "leave-booked-pending": "leave-booked-pending",
+                      }}
                     />
+                    <div className="border-t p-2.5 bg-muted/30 flex items-center justify-between text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-amber-200 border border-amber-400 inline-block" />
+                        <span>Pending Leave</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-emerald-200 border border-emerald-400 inline-block" />
+                        <span>Approved Leave</span>
+                      </div>
+                    </div>
                   </PopoverContent>
                 </Popover>
                 <FieldError field="endDate" />
