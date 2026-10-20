@@ -60,7 +60,7 @@ export default function AppSidebar({ collapsed, setCollapsed }) {
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold leading-tight">LeaveFlow</span>
+              <span className="text-sm font-semibold leading-tight">LeaveSystem</span>
               <span className="text-[10px] text-muted-foreground leading-tight">People Operations</span>
             </div>
           )}
@@ -189,7 +189,7 @@ export default function AppSidebar({ collapsed, setCollapsed }) {
               <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                 <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {}}>
+              <DropdownMenuItem onClick={() => { }}>
                 <Settings className="mr-2 h-4 w-4" /> Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />

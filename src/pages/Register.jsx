@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Leaf, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { DEPARTMENTS } from "@/data/demoData";
+import { apiUrl } from "@/lib/api";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ export default function Register() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(apiUrl("/api/auth/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -94,10 +95,10 @@ export default function Register() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Leaf className="h-4 w-4" />
             </div>
-            <span className="text-lg font-bold">LeaveFlow</span>
+            <span className="text-lg font-bold">LeaveSystem</span>
           </div>
           <CardTitle className="text-2xl">Create an account</CardTitle>
-          <CardDescription>Get started with LeaveFlow today</CardDescription>
+          <CardDescription>Get started with LeaveSystem today</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

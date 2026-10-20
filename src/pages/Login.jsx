@@ -66,7 +66,7 @@ export default function Login() {
               <Leaf className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">LeaveFlow</h1>
+              <h1 className="text-xl font-bold">LeaveSystem</h1>
               <p className="text-xs text-muted-foreground">People Operations</p>
             </div>
           </div>
@@ -97,7 +97,7 @@ export default function Login() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Leaf className="h-4 w-4" />
               </div>
-              <span className="text-lg font-bold">LeaveFlow</span>
+              <span className="text-lg font-bold">LeaveSystem</span>
             </div>
             <CardTitle className="text-2xl">Welcome back</CardTitle>
             <CardDescription>Sign in to your account to continue</CardDescription>

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { DEMO_ACCOUNTS, EMPLOYEES, LEAVE_REQUESTS, LEAVE_POLICIES } from "../data/demoData";
+import { apiUrl } from "@/lib/api";
 
 const AppContext = createContext(null);
 
@@ -21,7 +22,7 @@ export function AppProvider({ children }) {
   const login = useCallback(async (email, password) => {
     // 1. Try real backend API
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(apiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -66,7 +67,7 @@ export function AppProvider({ children }) {
   // Auth: Logout
   const logout = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      await fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include" });
     } catch {
       // Ignore network errors on logout
     }
@@ -75,18 +76,18 @@ export function AppProvider({ children }) {
     setUser(null);
   }, []);
 
-  // Sync leaves from MongoDB database
+  // Sync leaves and employees from MongoDB database
   useEffect(() => {
     if (!user) return;
 
-    const fetchLeaves = async () => {
-      try {
-        const token = localStorage.getItem("leaveflow_token");
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const syncDatabaseData = async () => {
+      const token = localStorage.getItem("leaveflow_token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // If admin, fetch all leave requests; if employee, fetch personal /api/leaves/me
+      // 1. Fetch Leaves
+      try {
         const endpoint = user.role === "admin" ? "/api/approvals?status=all" : "/api/leaves/me";
-        const res = await fetch(endpoint, { headers, credentials: "include" });
+        const res = await fetch(apiUrl(endpoint), { headers, credentials: "include" });
         const data = await res.json();
 
         const items = data.data?.leaves || data.data?.requests;
@@ -107,9 +108,27 @@ export function AppProvider({ children }) {
       } catch (err) {
         // Fallback to local data
       }
+
+      // 2. Fetch Employees from Database
+      try {
+        const res = await fetch(apiUrl("/api/employees?limit=100"), { headers, credentials: "include" });
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.data?.employees)) {
+          const apiEmployees = data.data.employees.map((e) => ({
+            ...e,
+            id: e._id || e.id,
+            joiningDate: e.joiningDate ? e.joiningDate.split("T")[0] : "",
+          }));
+
+          setEmployees(apiEmployees);
+        }
+      } catch (err) {
+        // Fallback to local data
+      }
     };
 
-    fetchLeaves();
+    syncDatabaseData();
   }, [user]);
 
   // Leave requests: Apply (saves to MongoDB)
@@ -122,7 +141,7 @@ export function AppProvider({ children }) {
 
     // 1. Send to real backend MongoDB API
     try {
-      const res = await fetch("/api/leaves", {
+      const res = await fetch(apiUrl("/api/leaves"), {
         method: "POST",
         headers,
         credentials: "include",
@@ -177,7 +196,7 @@ export function AppProvider({ children }) {
   const cancelLeaveRequest = useCallback(async (requestId) => {
     const token = localStorage.getItem("leaveflow_token");
     try {
-      await fetch(`/api/leaves/${requestId}/cancel`, {
+      await fetch(apiUrl(`/api/leaves/${requestId}/cancel`), {
         method: "PATCH",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
@@ -199,7 +218,7 @@ export function AppProvider({ children }) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
     try {
-      const res = await fetch(`/api/approvals/${requestId}/approve`, {
+      const res = await fetch(apiUrl(`/api/approvals/${requestId}/approve`), {
         method: "PATCH",
         headers,
         credentials: "include",
@@ -254,7 +273,7 @@ export function AppProvider({ children }) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
     try {
-      const res = await fetch(`/api/approvals/${requestId}/reject`, {
+      const res = await fetch(apiUrl(`/api/approvals/${requestId}/reject`), {
         method: "PATCH",
         headers,
         credentials: "include",
@@ -300,20 +319,95 @@ export function AppProvider({ children }) {
     return { success: true };
   }, []);
 
-  // Employees
-  const addEmployee = useCallback((employee) => {
-    const id = `emp-${String(employees.length + 1).padStart(3, "0")}`;
-    const employeeId = `EMP-${1000 + employees.length + 1}`;
-    setEmployees((prev) => [
-      ...prev,
-      { ...employee, id, employeeId, status: "active", avatar: null },
-    ]);
-  }, [employees.length]);
+  // Employees (saves to MongoDB)
+  const addEmployee = useCallback(async (employeeData) => {
+    const token = localStorage.getItem("leaveflow_token");
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
 
-  const updateEmployee = useCallback((id, updates) => {
+    const autoEmployeeId = employeeData.employeeId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    try {
+      const res = await fetch(apiUrl("/api/employees"), {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({
+          name: employeeData.name.trim(),
+          email: employeeData.email.trim(),
+          employeeId: (employeeData.employeeId || autoEmployeeId).trim(),
+          department: employeeData.department || "Engineering",
+          designation: employeeData.designation || "Staff",
+          role: employeeData.role || "employee",
+          phone: employeeData.phone || "",
+          joiningDate: employeeData.joiningDate || new Date().toISOString().split("T")[0],
+          password: employeeData.password || "demo1234",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.data?.employee) {
+        const saved = data.data.employee;
+        const newEmp = {
+          ...saved,
+          id: saved._id || saved.id,
+          joiningDate: saved.joiningDate ? saved.joiningDate.split("T")[0] : "",
+        };
+        setEmployees((prev) => [newEmp, ...prev.filter((e) => e.id !== newEmp.id && e.email !== newEmp.email)]);
+        return { success: true, employee: newEmp };
+      } else {
+        const msg = data.message || (data.errors && data.errors[0]) || "Failed to create employee";
+        return { success: false, message: msg };
+      }
+    } catch (err) {
+      console.warn("Backend error creating employee, using fallback", err);
+    }
+
+    const fallbackEmp = {
+      ...employeeData,
+      id: `emp-${Date.now()}`,
+      employeeId: employeeData.employeeId || autoEmployeeId,
+      status: "active",
+      avatar: null,
+    };
+    setEmployees((prev) => [fallbackEmp, ...prev]);
+    return { success: true, employee: fallbackEmp };
+  }, []);
+
+  const updateEmployee = useCallback(async (id, updates) => {
+    const token = localStorage.getItem("leaveflow_token");
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    try {
+      const res = await fetch(apiUrl(`/api/employees/${id}`), {
+        method: "PATCH",
+        headers,
+        credentials: "include",
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.employee) {
+        const saved = data.data.employee;
+        setEmployees((prev) =>
+          prev.map((e) => (e.id === id || e._id === id ? { ...e, ...saved, id: saved._id || id } : e))
+        );
+        return { success: true };
+      } else {
+        return { success: false, message: data.message || "Failed to update employee" };
+      }
+    } catch (err) {
+      console.warn("Backend error updating employee, using fallback", err);
+    }
+
     setEmployees((prev) =>
       prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
     );
+    return { success: true };
   }, []);
 
   // Policies

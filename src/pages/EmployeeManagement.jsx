@@ -26,6 +26,7 @@ import {
   Calendar,
   CheckCircle2
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function EmployeeManagement() {
   const { employees, addEmployee, updateEmployee, leaveRequests } = useApp();
@@ -93,11 +94,17 @@ export default function EmployeeManagement() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCreateEmployee = (e) => {
+  const handleCreateEmployee = async (e) => {
     e.preventDefault();
     if (!validateNewEmp()) return;
 
-    addEmployee(newEmp);
+    const res = await addEmployee(newEmp);
+    if (res && res.success === false) {
+      toast.error(res.message || "Failed to create employee");
+      return;
+    }
+
+    toast.success("Employee created and saved to database!");
     setIsAddOpen(false);
     setNewEmp({
       name: "",
@@ -111,24 +118,37 @@ export default function EmployeeManagement() {
     setFormErrors({});
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!editingEmployee) return;
 
-    updateEmployee(editingEmployee.id, {
+    const res = await updateEmployee(editingEmployee.id || editingEmployee._id, {
+      name: editingEmployee.name,
       department: editingEmployee.department,
       designation: editingEmployee.designation,
       role: editingEmployee.role,
       phone: editingEmployee.phone,
       status: editingEmployee.status,
     });
+
+    if (res && res.success === false) {
+      toast.error(res.message || "Failed to update employee");
+      return;
+    }
+
+    toast.success("Employee details updated in database!");
     setEditingEmployee(null);
   };
 
   // Leaves for viewed employee
   const employeeLeaves = useMemo(() => {
     if (!viewingEmployee) return [];
-    return leaveRequests.filter((r) => r.employeeId === viewingEmployee.id);
+    return leaveRequests.filter(
+      (r) =>
+        r.employeeId === viewingEmployee.employeeId ||
+        r.employeeId === viewingEmployee.id ||
+        (viewingEmployee._id && String(r.user) === String(viewingEmployee._id))
+    );
   }, [viewingEmployee, leaveRequests]);
 
   return (

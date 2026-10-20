@@ -49,7 +49,7 @@ export default function AppHeader({ onMobileMenuOpen }) {
 
       {/* Breadcrumb */}
       <nav className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link to="/dashboard" className="hover:text-foreground transition-colors">LeaveFlow</Link>
+        <Link to="/dashboard" className="hover:text-foreground transition-colors">LeaveSystem</Link>
         <ChevronRight className="h-3.5 w-3.5" />
         {isAdmin && (
           <>
@@ -93,7 +93,7 @@ export default function AppHeader({ onMobileMenuOpen }) {
               <p className="text-xs text-muted-foreground font-normal">{user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => {}}>
+            <DropdownMenuItem onClick={() => { }}>
               <Settings className="mr-2 h-4 w-4" /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
