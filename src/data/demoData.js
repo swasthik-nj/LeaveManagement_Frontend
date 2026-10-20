@@ -38,7 +38,7 @@ const LEAVE_POLICIES = [
     totalDays: 12,
     carryForward: false,
     maxCarryForward: 0,
-    approvalRequired: false,
+    approvalRequired: true,
     description: "Leave for illness or medical appointments. Medical certificate required for absences of 3 or more consecutive days. No carry forward.",
   },
   {

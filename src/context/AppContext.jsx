@@ -84,8 +84,8 @@ export function AppProvider({ children }) {
         const token = localStorage.getItem("leaveflow_token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // If admin, fetch all pending + personal leaves; if employee, fetch /api/leaves/me
-        const endpoint = user.role === "admin" ? "/api/approvals/pending" : "/api/leaves/me";
+        // If admin, fetch all leave requests; if employee, fetch personal /api/leaves/me
+        const endpoint = user.role === "admin" ? "/api/approvals?status=all" : "/api/leaves/me";
         const res = await fetch(endpoint, { headers, credentials: "include" });
         const data = await res.json();
 
@@ -94,6 +94,7 @@ export function AppProvider({ children }) {
           const apiLeaves = items.map((l) => ({
             ...l,
             id: l._id || l.id,
+            leaveTypeLabel: l.leaveTypeLabel || l.leaveType,
             appliedDate: l.appliedDate ? l.appliedDate.split("T")[0] : "",
           }));
 
@@ -191,16 +192,42 @@ export function AppProvider({ children }) {
   }, []);
 
   // Approve leave request (Admin)
-  const approveLeaveRequest = useCallback(async (requestId, approverName) => {
+  const approveLeaveRequest = useCallback(async (requestId, approverName, comment = "") => {
     const token = localStorage.getItem("leaveflow_token");
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     try {
-      await fetch(`/api/approvals/${requestId}/approve`, {
+      const res = await fetch(`/api/approvals/${requestId}/approve`, {
         method: "PATCH",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
         credentials: "include",
+        body: JSON.stringify({ comment }),
       });
-    } catch {
-      // Local fallback
+      const data = await res.json();
+      if (data.success && data.data?.request) {
+        const updated = data.data.request;
+        setLeaveRequests((prev) =>
+          prev.map((r) =>
+            r.id === requestId
+              ? {
+                  ...r,
+                  ...updated,
+                  id: updated._id || updated.id,
+                  status: "approved",
+                  approvedBy: approverName,
+                  approvedDate: new Date().toISOString().split("T")[0],
+                }
+              : r
+          )
+        );
+        return { success: true };
+      } else {
+        console.warn("Approval API error:", data.message);
+      }
+    } catch (err) {
+      console.warn("Backend error approving request, using local fallback", err);
     }
 
     setLeaveRequests((prev) =>
@@ -215,23 +242,45 @@ export function AppProvider({ children }) {
           : r
       )
     );
+    return { success: true };
   }, []);
 
   // Reject leave request (Admin)
   const rejectLeaveRequest = useCallback(async (requestId, approverName, reason) => {
     const token = localStorage.getItem("leaveflow_token");
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     try {
-      await fetch(`/api/approvals/${requestId}/reject`, {
+      const res = await fetch(`/api/approvals/${requestId}/reject`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         credentials: "include",
         body: JSON.stringify({ reason }),
       });
-    } catch {
-      // Local fallback
+      const data = await res.json();
+      if (data.success && data.data?.request) {
+        const updated = data.data.request;
+        setLeaveRequests((prev) =>
+          prev.map((r) =>
+            r.id === requestId
+              ? {
+                  ...r,
+                  ...updated,
+                  id: updated._id || updated.id,
+                  status: "rejected",
+                  approvedBy: approverName,
+                  rejectionReason: reason,
+                  approvedDate: new Date().toISOString().split("T")[0],
+                }
+              : r
+          )
+        );
+        return { success: true };
+      }
+    } catch (err) {
+      console.warn("Backend error rejecting request, using local fallback", err);
     }
 
     setLeaveRequests((prev) =>
@@ -247,6 +296,7 @@ export function AppProvider({ children }) {
           : r
       )
     );
+    return { success: true };
   }, []);
 
   // Employees
