@@ -184,24 +184,7 @@ export default function Login() {
             </form>
 
             {/* Demo accounts */}
-            <div className="mt-6 pt-4 border-t">
-              <p className="text-xs text-muted-foreground mb-3 text-center">Demo accounts for testing</p>
-              <div className="grid gap-2">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    onClick={() => fillDemo(acc)}
-                    className="flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm hover:bg-accent transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium">{acc.name}</p>
-                      <p className="text-xs text-muted-foreground">{acc.email}</p>
-                    </div>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize">{acc.role}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+
           </CardContent>
         </Card>
       </div>
