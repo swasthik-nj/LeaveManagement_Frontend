@@ -1,122 +1,115 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AppProvider, useApp } from "@/context/AppContext";
+import { Toaster } from "sonner";
 
-function App() {
-  const [count, setCount] = useState(0)
+// Layout & Core
+import AppLayout from "@/components/layout/AppLayout";
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+// Auth Pages
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 
-      <div className="ticks"></div>
+// Employee Pages
+import EmployeeDashboard from "@/pages/EmployeeDashboard";
+import ApplyLeave from "@/pages/ApplyLeave";
+import MyLeaveRequests from "@/pages/MyLeaveRequests";
+import LeaveHistory from "@/pages/LeaveHistory";
+import LeaveBalance from "@/pages/LeaveBalance";
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+// Admin Pages
+import AdminDashboard from "@/pages/AdminDashboard";
+import LeaveApprovals from "@/pages/LeaveApprovals";
+import EmployeeManagement from "@/pages/EmployeeManagement";
+import LeavePolicies from "@/pages/LeavePolicies";
+import Reports from "@/pages/Reports";
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+// Role-based route guard for Admin pages
+function AdminRoute({ children }) {
+  const { user, isAdmin } = useApp();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
 }
 
-export default App
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public Auth Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      {/* Authenticated Workspace Shell */}
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Employee Routes */}
+        <Route path="/dashboard" element={<EmployeeDashboard />} />
+        <Route path="/apply-leave" element={<ApplyLeave />} />
+        <Route path="/leave-requests" element={<MyLeaveRequests />} />
+        <Route path="/leave-history" element={<LeaveHistory />} />
+        <Route path="/leave-balance" element={<LeaveBalance />} />
+
+        {/* Admin Console Routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/approvals"
+          element={
+            <AdminRoute>
+              <LeaveApprovals />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/employees"
+          element={
+            <AdminRoute>
+              <EmployeeManagement />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/policies"
+          element={
+            <AdminRoute>
+              <LeavePolicies />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <AdminRoute>
+              <Reports />
+            </AdminRoute>
+          }
+        />
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <BrowserRouter>
+        <Toaster position="top-right" richColors />
+        <AppRoutes />
+      </BrowserRouter>
+    </AppProvider>
+  );
+}
