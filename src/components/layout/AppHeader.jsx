@@ -64,16 +64,16 @@ export default function AppHeader({ onMobileMenuOpen }) {
       <span className="sm:hidden text-sm font-semibold">{pageTitle}</span>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Search trigger */}
+        {/* Search trigger
         <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Search">
           <Search className="h-4 w-4" />
         </Button>
 
-        {/* Notifications */}
+        Notifications
         <Button variant="ghost" size="icon" className="h-8 w-8 relative" aria-label="Notifications">
           <Bell className="h-4 w-4" />
           <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
-        </Button>
+        </Button> */}
 
         <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
 
