@@ -3,13 +3,52 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { getGreeting, formatDate, formatDateRange } from "@/lib/dateUtils";
 import { getEmployeeSummary } from "@/lib/calculations";
-import { CalendarPlus, CalendarDays, Clock, Timer, CalendarCheck, MoreHorizontal, Eye, XCircle, ArrowRight } from "lucide-react";
+import {
+  CalendarPlus,
+  CalendarDays,
+  Clock,
+  Timer,
+  CalendarCheck,
+  MoreHorizontal,
+  Eye,
+  XCircle,
+  ArrowRight,
+  BarChart3
+} from "lucide-react";
+
+const chartConfig = {
+  available: {
+    label: "Available Days",
+    color: "#10b981", // Emerald Green
+  },
+  used: {
+    label: "Used Days",
+    color: "#6366f1", // Indigo / Primary
+  },
+  pending: {
+    label: "Pending Review",
+    color: "#f59e0b", // Amber
+  },
+};
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -28,11 +67,27 @@ export default function EmployeeDashboard() {
   const recentRequests = myRequests.slice(0, 5);
 
   const summaryCards = [
-    { title: "Available Leave", value: `${summary.totalAvailable} days`, description: `of ${summary.totalEntitlement} total entitlement`, icon: CalendarDays, color: "text-emerald-600 bg-emerald-50" },
-    { title: "Used This Year", value: `${summary.totalUsed} days`, description: `${summary.totalEntitlement - summary.totalUsed} days remaining`, icon: Clock, color: "text-blue-600 bg-blue-50" },
-    { title: "Pending Requests", value: summary.pendingRequests, description: summary.pendingRequests > 0 ? "Awaiting manager approval" : "No pending requests", icon: Timer, color: "text-amber-600 bg-amber-50" },
-    { title: "Upcoming Leave", value: summary.upcomingLeave.length > 0 ? formatDate(summary.upcomingLeave[0].startDate, "MMM dd") : "None", description: summary.upcomingLeave.length > 0 ? `${summary.upcomingLeave[0].days} day(s) · ${summary.upcomingLeave[0].leaveTypeLabel}` : "No upcoming leave scheduled", icon: CalendarCheck, color: "text-violet-600 bg-violet-50" },
+    { title: "Available Leave", value: `${summary.totalAvailable} days`, description: `of ${summary.totalEntitlement} total entitlement`, icon: CalendarDays, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40" },
+    { title: "Used This Year", value: `${summary.totalUsed} days`, description: `${summary.totalEntitlement - summary.totalUsed} days remaining`, icon: Clock, color: "text-blue-600 bg-blue-50 dark:bg-blue-950/40" },
+    { title: "Pending Requests", value: summary.pendingRequests, description: summary.pendingRequests > 0 ? "Awaiting manager approval" : "No pending requests", icon: Timer, color: "text-amber-600 bg-amber-50 dark:bg-amber-950/40" },
+    { title: "Upcoming Leave", value: summary.upcomingLeave.length > 0 ? formatDate(summary.upcomingLeave[0].startDate, "MMM dd") : "None", description: summary.upcomingLeave.length > 0 ? `${summary.upcomingLeave[0].days} day(s) · ${summary.upcomingLeave[0].leaveTypeLabel}` : "No upcoming leave scheduled", icon: CalendarCheck, color: "text-violet-600 bg-violet-50 dark:bg-violet-950/40" },
   ];
+
+  // Bar chart dataset comparing Available vs Used vs Pending days
+  const barChartData = useMemo(() => {
+    return summary.balances.map((b) => ({
+      category: b.label.replace(" Leave", ""),
+      fullName: b.label,
+      available: b.balance.available,
+      used: b.balance.used,
+      pending: b.balance.pending,
+      total: b.balance.total,
+    }));
+  }, [summary.balances]);
+
+  const hasPendingDays = useMemo(() => {
+    return summary.balances.some((b) => b.balance.pending > 0);
+  }, [summary.balances]);
 
   return (
     <div className="space-y-6">
@@ -42,7 +97,7 @@ export default function EmployeeDashboard() {
           <h1 className="text-2xl font-bold tracking-tight">{getGreeting()}, {user?.name?.split(" ")[0]} 👋</h1>
           <p className="text-muted-foreground text-sm mt-1">Here's an overview of your time off and upcoming plans.</p>
         </div>
-        <Button onClick={() => navigate("/apply-leave")} className="shrink-0">
+        <Button onClick={() => navigate("/apply-leave")} className="shrink-0 gap-2">
           <CalendarPlus className="h-4 w-4" /> Apply for Leave
         </Button>
       </div>
@@ -70,33 +125,94 @@ export default function EmployeeDashboard() {
         })}
       </div>
 
-      {/* Leave balance breakdown */}
+      {/* Leave balance Bar Chart breakdown */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <CardTitle className="text-base">Leave Balance</CardTitle>
-              <CardDescription>Your current leave entitlements</CardDescription>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base font-semibold">Leave Balance</CardTitle>
+              </div>
+              <CardDescription className="text-xs mt-0.5">
+                Visual entitlement breakdown: Available vs. Used days per leave category
+              </CardDescription>
             </div>
             <Button variant="ghost" size="sm" onClick={() => navigate("/leave-balance")}>
               View details <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="space-y-6 pt-2">
+          {/* shadcn Bar Chart */}
+          <div className="pt-2">
+            <ChartContainer config={chartConfig} className="aspect-auto h-[260px] w-full">
+              <BarChart
+                data={barChartData}
+                margin={{ top: 10, right: 15, left: -15, bottom: 0 }}
+                barGap={6}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted/60" />
+                <XAxis
+                  dataKey="category"
+                  tickLine={false}
+                  tickMargin={8}
+                  axisLine={false}
+                  className="text-xs font-medium"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  className="text-xs text-muted-foreground"
+                  allowDecimals={false}
+                />
+                <ChartTooltip
+                  cursor={{ fill: "rgba(0, 0, 0, 0.04)" }}
+                  content={<ChartTooltipContent indicator="dot" />}
+                />
+                <ChartLegend content={<ChartLegendContent />} className="pt-2 text-xs" />
+                <Bar
+                  dataKey="available"
+                  fill="#10b981"
+                  radius={[5, 5, 0, 0]}
+                  maxBarSize={40}
+                />
+                <Bar
+                  dataKey="used"
+                  fill="#6366f1"
+                  radius={[5, 5, 0, 0]}
+                  maxBarSize={40}
+                />
+                {hasPendingDays && (
+                  <Bar
+                    dataKey="pending"
+                    fill="#f59e0b"
+                    radius={[5, 5, 0, 0]}
+                    maxBarSize={40}
+                  />
+                )}
+              </BarChart>
+            </ChartContainer>
+          </div>
+
+          {/* Quick Category Summary Cards */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 pt-2 border-t">
             {summary.balances.map((b) => {
-              const pct = b.balance.total > 0 ? (b.balance.used / b.balance.total) * 100 : 0;
+              const pct = b.balance.total > 0 ? Math.round((b.balance.used / b.balance.total) * 100) : 0;
               return (
-                <div key={b.type} className="space-y-2 rounded-lg border p-3.5">
+                <div key={b.type} className="rounded-lg border bg-muted/20 p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{b.label}</p>
-                    <p className="text-xs text-muted-foreground">{b.balance.available} / {b.balance.total} available</p>
+                    <p className="text-xs font-semibold">{b.label}</p>
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {b.balance.available} / {b.balance.total} left
+                    </span>
                   </div>
-                  <Progress value={pct} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{b.balance.used} used</span>
-                    {b.balance.pending > 0 && <span>{b.balance.pending} pending</span>}
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-medium">{b.balance.used} used ({pct}%)</span>
+                    {b.balance.pending > 0 && (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">{b.balance.pending} pending</span>
+                    )}
                   </div>
                 </div>
               );
